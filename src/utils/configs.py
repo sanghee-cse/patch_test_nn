@@ -201,9 +201,9 @@ class PatchYTractionProblem(BaseConfig):
         self.resample()
 
         self.plot_style.update({
-            'sxx': {'vmin': 0.54, 'vmax': 0.56, 'tick_step': 0.01, 'cmap': 'magma'},
+            'syy': {'vmin': 0.54, 'vmax': 0.56, 'tick_step': 0.01, 'cmap': 'magma'},
             'vm': {'vmin': 0.54, 'vmax': 0.56, 'tick_step': 0.01, 'cmap': 'magma'},
-            'syy': STRESS_NOISE,
+            'sxx': STRESS_NOISE,
             'sxy': STRESS_NOISE,
         })
 
@@ -516,7 +516,13 @@ EXPERIMENTAL_CASES = {
     "Xtraction": {
         "class": PatchXTractionProblem,
         "save_dir": "/Patch_X_traction",
-        "description": "Uniaxial traction test for verification"
+        "description": "Uniaxial tension test (X-direction) for constant stress verification"
+    },
+
+    "Ytraction": {
+        "class": PatchYTractionProblem,
+        "save_dir": "/Patch_Y_traction",
+        "description": "Uniaxial tension test (Y-direction) for constant stress verification"
     },
 
     "shear": {
@@ -524,37 +530,34 @@ EXPERIMENTAL_CASES = {
         "save_dir": "/Patch_shear",
         "description": "Pure shear patch test"
     },
+
     "rotation": {
         "class": PatchRotationProblem,
         "save_dir": "/Patch_rotation",
-        "description": "Rotation test for rigid body mode test"
+        "description": "Rigid body rotation test to verify zero-stress state"
     },
+
     "Xtranslation": {
         "class": PatchXTranslationProblem,
         "save_dir": "/Patch_X_translation",
-        "description": "Translation test for rigid body mode test"
+        "description": "Rigid body translation (X-direction) with spring boundary verification"
     },
+
+    "Ytranslation": {
+    "class": PatchYTranslationProblem,
+    "save_dir": "/Patch_Y_translation",
+    "description": "Rigid body translation (Y-direction) with spring boundary verification"
+    },
+
     "quaterhole": {
         "class": PlateWithAHoleDispProblem, 
         "save_dir": "/plate_hole_qtr_disp",
-        "description": "Quarter model with prescribed displacement (Symmetry check)"
+        "description": "Quarter-plate with hole with prescribed displacement (Symmetry check)"
     },
 
     "fullhole": {
         "class": FullPlateWithAHoleTractionProblem, 
         "save_dir": "/plate_hole_full_traction",
-        "description": "Full model with remote traction (Benchmark solution)"
+        "description": "Full-plate with hole with remote traction BCs"
     }
 }
-
-""" "Ytraction": {
-        "class": PatchYTractionProblem,
-        "save_dir": "/Patch_Y_traction",
-        "description": "Uniaxial traction test for verification"
-    },"""
-""" "Ytranslation": {
-    "class": PatchYTranslationProblem,
-    "save_dir": "/Patch_Y_translation",
-    "description": "Translation test for rigid body mode test"
-},"""
-"""  """
