@@ -167,6 +167,48 @@ class PatchXTractionProblem(BaseConfig):
 
         return self
         
+class PatchYTractionProblem(BaseConfig):
+    def setup(self):
+        self.physics = PhysicsConfig(
+            E = 55.0,
+            nu = 0.3,
+            L = 10.0,    
+            q = 0.55,   
+            mode = "plane_strain"
+        )
+        
+        self._bake_physics()
+
+        L = self.physics.L
+        n_bc = self.train.n_bc
+        
+        self.geom = Rectangle2D(0, L, 0, L)
+        self.edges = self.geom.get_boundaries()
+
+        self.pin_point = Point2D([0.0, 0.0])
+        self.roller_point = Point2D([L, 0.0])
+
+        bc_configs = [
+            (PinBC(self.pin_point), 10, 1.0, {}),
+            (PointRollerBC(self.roller_point, normal_vec=[0.0, 1.0]), 10, 1.0, {}),
+            (TractionBC(self.edges["left"],   traction_=None), n_bc, 1.0, {}),
+            (TractionBC(self.edges["right"],  traction_=None), n_bc, 1.0, {}),
+            (TractionBC(self.edges["top"],    traction_=[0.0, self.physics.q]),    n_bc, 1.0, {}),
+            (TractionBC(self.edges["bottom"], traction_=[0.0, -self.physics.q]),   n_bc, 1.0, {})
+        ]
+
+        self.bc_manager = BCManager(bc_configs)
+        self.resample()
+
+        self.plot_style.update({
+            'sxx': {'vmin': 0.54, 'vmax': 0.56, 'tick_step': 0.01, 'cmap': 'magma'},
+            'vm': {'vmin': 0.54, 'vmax': 0.56, 'tick_step': 0.01, 'cmap': 'magma'},
+            'syy': STRESS_NOISE,
+            'sxy': STRESS_NOISE,
+        })
+
+        return self
+        
 
 class PatchShearProblem(BaseConfig):
     def setup(self):
@@ -243,7 +285,7 @@ class PatchXTranslationProblem(BaseConfig):
             
             (TractionBC(self.edges["top"],    traction_=None), n_bc, 1.0, {}),
             (TractionBC(self.edges["right"],  traction_=None), n_bc, 1.0, {}),
-            (TractionBC(self.left_free_mid,  traction_=None), n_bc, 1.0, {})
+            (TractionBC(self.left_free_mid,   traction_=None), n_bc, 1.0, {})
         ]
 
         self.bc_manager = BCManager(bc_configs)
@@ -268,7 +310,70 @@ class PatchXTranslationProblem(BaseConfig):
                                            device=self.device, dtype=self.dtype)
         
         return self
+
+class PatchYTranslationProblem(BaseConfig):
+    def setup(self):
+        self.physics = PhysicsConfig(
+            E = 55.0,
+            nu = 0.3,
+            L = 10.0,    
+            q = 0.55,
+            ks_val = 5.5,
+            l_bc = 0.1,
+            mode = "plane_strain",
+        )
+
+        self._bake_physics()
+
+        L = self.physics.L
+        self.geom = Rectangle2D(0, L, 0, L)
+        self.edges = self.geom.get_boundaries()
+        
+        l_bc = self.physics.l_bc
+        n_bc = self.train.n_bc
+        
+        self.bottom_spring_left  = LineEdge2D([0.0, 0.0], [l_bc, 0.0])
+        self.bottom_free_mid     = LineEdge2D([l_bc, 0.0], [L - l_bc, 0.0])
+        self.bottom_spring_right = LineEdge2D([L - l_bc, 0.0], [L, 0.0])
+
+        bc_configs = [
+            (SpringBC(self.bottom_spring_left, k=self.physics.ks_val, 
+                      spring_vec=[0.0, 1.0], q_val=self.physics.q), 
+             n_bc, 1.0, {'sampling': 'power_law', 'focus': 'p1'}),
+            
+            (SpringBC(self.bottom_spring_right, k=self.physics.ks_val, 
+                      spring_vec=[0.0, 1.0], q_val=self.physics.q), 
+             n_bc, 1.0, {'sampling': 'power_law', 'focus': 'p2'}),
+            
+            (RollerBC(self.edges["left"]), n_bc, 1.0, {}),
+            
+            (TractionBC(self.edges["top"],    traction_=None), n_bc, 1.0, {}),
+            (TractionBC(self.edges["right"],  traction_=None), n_bc, 1.0, {}),
+            (TractionBC(self.bottom_free_mid, traction_=None), n_bc, 1.0, {})
+        ]
+
+        self.bc_manager = BCManager(bc_configs)
+        self.resample()            
+        
+        self.plot_style.update({
+            'sxx': STRESS_NOISE,
+            'syy': STRESS_NOISE,
+            'sxy': STRESS_NOISE,
+            'vm':  STRESS_NOISE,
+            'uy': {'cmap': 'magma', 'vmin': 0.099, 'vmax': 0.101, 'tick_step': 0.001},
+            'u_mag': {'cmap': 'magma', 'vmin': 0.099, 'vmax': 0.101, 'tick_step': 0.001},
+            'ux': DISP_NOISE,
+        })
+            
+        return self
     
+    def resample(self):
+        self.bc_manager.resample(self.device, self.dtype)
+        self.coords_pde = self.geom.sample(self.train.n_pde,
+                                            device=self.device, dtype=self.dtype)
+        
+        return self
+
 class PatchRotationProblem(BaseConfig):
     def setup(self):
         self.physics = PhysicsConfig(
