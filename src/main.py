@@ -11,7 +11,7 @@ import json
 import numpy as np
 
 from utils.configs import TrainConfig, EXPERIMENTAL_CASES
-from utils.models import MLP, SkewMLP
+from utils.models import MLP, SkewMLP, SxxMLP, SyyMLP
 from utils.plotter import Plotter
 from utils.mechanics import PDELoss
 from dataclasses import asdict
@@ -156,7 +156,7 @@ if __name__ == "__main__":
         activation='tanh'
     )
     
-    target_models = [MLP, SkewMLP]
+    target_models = [MLP, SkewMLP, SxxMLP, SyyMLP]
     
     print(f"Total Cases Found: {len(EXPERIMENTAL_CASES)}")
     
