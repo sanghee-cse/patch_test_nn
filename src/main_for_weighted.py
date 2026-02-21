@@ -155,8 +155,8 @@ if __name__ == "__main__":
             train_cfg = copy.deepcopy(train_cfg_base)
             
             if case_name not in ["quaterhole", "fullhole"]:
-                train_cfg.n_pde = 400
-                print(f"[{case_name}] Setting n_pde to 400")
+                train_cfg.n_pde = 250
+                print(f"[{case_name}] Setting n_pde to 250")
             else:
                 print(f"[{case_name}] Keeping n_pde at {train_cfg.n_pde}")
 
