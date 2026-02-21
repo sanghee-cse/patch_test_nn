@@ -120,18 +120,8 @@ def run_experiment(case_name, case_data, ModelClass, train_cfg, base_result_dir=
     plotter.plot_results(custom_configs=config.plot_style, save=True)
     plotter.plot_deformed(scale_factor=20.0, save=True)
     plotter.plot_history(history, save=True)
-    
-    config_to_save = {
-        "train_info": asdict(train_cfg),
-        "case_name": case_name,
-        "model_name": model_name,
-        "dtype": str(train_cfg.dtype) 
-    }
 
-    config_path = os.path.join(save_dir, "exp_config.json")
-    with open(config_path, 'w') as f:
-        json.dump(config_to_save, f, indent=4)
-
+    config.save(save_dir, case_name=case_name, model_name=model_name)
 
     model_path = os.path.join(save_dir, f"{model_name}_weights.pth")
     torch.save(model.state_dict(), model_path)

@@ -1,6 +1,8 @@
+import os
+import json
 import torch
 import copy
-from dataclasses     import dataclass
+from dataclasses     import asdict, dataclass
 from utils.materials import ElasticMaterial
 from utils.bcs       import BCManager, TractionBC, RollerBC, PointRollerBC, PinBC, SpringBC, DisplacementBC
 from utils.geometry  import Point2D, Rectangle2D, Circle2D, LineEdge2D, ArcEdge2D, SubtractedGeometry
@@ -40,6 +42,22 @@ class TrainConfig:
     dtype:  torch.dtype = torch.float32
     activation: str = 'tanh'
     sampling_method: str = 'random'
+
+    def to_dict(self):
+        data = asdict(self)
+        data['dtype'] = str(self.dtype) 
+        return data
+    
+    def save(self, save_dir, **extra_info):
+        config_data = self.to_dict()
+        config_data.update(extra_info)
+
+        os.makedirs(save_dir, exist_ok=True)
+        config_path = os.path.join(save_dir, "exp_config.json")
+
+        with open(config_path, 'w') as f:
+            json.dump(config_data, f, indent=4)
+        print(f"Config saved to: {config_path}")
 
 STRESS_NOISE = {
     'vmin': -0.01, 'vmax': 0.01, 
@@ -100,7 +118,25 @@ class BaseConfig:
             u0=torch.tensor(u0_val)
         ).to(self.device, dtype=self.dtype)
 
-
+    def save(self, save_dir, **extra_info):
+        base_info = {
+            "physics": asdict(self.physics) if self.physics else None,
+            "scales": {
+                "L": self.scales.L.item(),
+                "s0": self.scales.s0.item(),
+                "u0": self.scales.u0.item()
+            } if self.scales else None,
+            "material": {
+                "E": self.material.E.item(),
+                "nu": self.material.nu.item(),
+                "lam": self.material.lam.item(),
+                "mu": self.material.mu.item()
+            } if self.material else None
+        }
+        
+        extra_info.update(base_info)
+        
+        self.train.save(save_dir, **extra_info)
 
     def print_summary(self):
         print(f"--- PINN Configuration Summary ---")
