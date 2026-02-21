@@ -26,8 +26,8 @@ def von_mises_stress(sxx, syy, sxy):
 def dot(v1, v2):
     return torch.sum(v1 * v2, axis=1, keepdim=True)
 
-def MSE(res):
-    return torch.mean(torch.sum(res**2, dim=1))
+def MSE(res, weight=1.0):
+    return torch.mean(torch.sum((res**2) * weight, dim=1))
 
 class PDELoss:
     def __init__(self, material, scales):
