@@ -67,4 +67,8 @@ class PDELoss:
             res_eq_y += b[1]* (self.scales.L / self.scales.s0)
 
         return torch.cat([res_consti_xx, res_consti_yy, res_consti_xy, res_eq_x, res_eq_y], dim=1)
-    
+    def get_loss(self, model, coords, weight=1.0, missing='no'):
+        if missing == 'no':
+            return MSE(self.residual(model, coords), weight=weight)
+        else:
+            return MSE(self.MissingResidual(model, coords), weight=weight)
