@@ -1,3 +1,5 @@
+import math
+
 import matplotlib
 matplotlib.use('Agg') 
 
@@ -24,6 +26,38 @@ np.random.seed(42)
 dtype = torch.float64
 torch.set_default_dtype(dtype)
 
+import csv
+import os
+
+def save_history_csv(history: dict, save_dir: str, adam_epochs: int, lbfgs_steps_done: int, filename="history.csv"):
+    path = os.path.join(save_dir, filename)
+    os.makedirs(save_dir, exist_ok=True)
+
+    n = len(history["train_loss"])
+    assert n == len(history["pde_loss"]) == len(history["bc_loss"]), "history length mismatch"
+
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["step", "phase", "phase_step", "train_loss", "pde_loss", "bc_loss"])
+
+        for step in range(n):
+            if step < adam_epochs:
+                phase = "adam"
+                phase_step = step
+            else:
+                phase = "lbfgs"
+                phase_step = step - adam_epochs
+
+            writer.writerow([
+                step,
+                phase,
+                phase_step,
+                history["train_loss"][step],
+                history["pde_loss"][step],
+                history["bc_loss"][step],
+            ])
+
+    print(f"History CSV saved to: {path}")
 
 def run_experiment(case_name, case_data, ModelClass, train_cfg, base_result_dir="../results"):
     
@@ -70,18 +104,22 @@ def run_experiment(case_name, case_data, ModelClass, train_cfg, base_result_dir=
     lbfgs = optim.LBFGS(
         model.parameters(),
         lr=1.0,
-        max_iter=1000,
+        max_iter=200,
         history_size=50,
-        tolerance_grad=1e-8,
-        tolerance_change=1e-9,
+        tolerance_grad=1e-11,
+        tolerance_change=1e-12,
         line_search_fn="strong_wolfe",
     )
-    if case_name == 'fullhole': n_lbfgs_steps = 70
-    elif case_name == 'quaterhole': n_lbfgs_steps = 50
-    else: n_lbfgs_steps = 10
+    
+    n_lbfgs_steps = 2000
+
+    best_loss = float('inf')
+    patience = 5
+    wait = 0
+    rel_tol = 1e-7
 
     pbar_lbfgs = tqdm(range(n_lbfgs_steps), desc="L-BFGS", leave=False)
-
+    
     for k in pbar_lbfgs:
 
         def closure():
@@ -108,10 +146,30 @@ def run_experiment(case_name, case_data, ModelClass, train_cfg, base_result_dir=
         history['pde_loss'].append(loss_pde.item())
         history['bc_loss'].append(loss_bc.item())
 
+        if not math.isfinite(best_loss):
+            best_loss = total
+            wait = 0
+            continue
+
+        if best_loss > 1e-15:
+            improvement = (best_loss - total) / best_loss
+        else: improvement = 0
+
+        if improvement > rel_tol:
+            best_loss = total
+            wait = 0
+        else:
+            wait += 1
+            if wait >= patience:
+                print(f"\n No significant improvement for {patience} steps. Stopping L-BFGS at step {k}.\n")
+                break
+
         if total < 1e-7:
-            print(f"Target loss was reached. Training completed after {k} lbfgs_steps")
+            print(f"\n Target loss was reached. Training completed after {k} lbfgs_steps.\n")
             break
             
+    
+    lbfgs_steps_done = min(n_lbfgs_steps, len(history["train_loss"]) - train_cfg.epochs)
 
     print("Saving results...")
     
@@ -122,11 +180,18 @@ def run_experiment(case_name, case_data, ModelClass, train_cfg, base_result_dir=
     plotter.plot_history(history, save=True)
 
     config.save(save_dir, case_name=case_name, model_name=model_name)
-
-    model_path = os.path.join(save_dir, f"{model_name}_weights.pth")
+    model_path = os.path.join(save_dir, f"weights.pth")
     torch.save(model.state_dict(), model_path)
     print(f"Model weights saved to: {model_path}")
-    
+
+    save_history_csv(
+        history=history,
+        save_dir=save_dir,
+        adam_epochs=train_cfg.epochs,
+        lbfgs_steps_done=lbfgs_steps_done,
+        filename="history.csv"
+    )
+
     plt.close('all')
 
     elapsed_time = time.time() - start_time
@@ -137,7 +202,7 @@ def run_experiment(case_name, case_data, ModelClass, train_cfg, base_result_dir=
 
 if __name__ == "__main__":
     start_time = time.time()
-    train_cfg = TrainConfig(
+    train_cfg_base = TrainConfig(
         epochs=2000, 
         lr=1e-4, 
         n_pde=1000, 
@@ -146,11 +211,19 @@ if __name__ == "__main__":
         activation='tanh'
     )
     
-    target_models = [MLP, SkewMLP, SxxMLP, SyyMLP]
+    target_models = [MLP, SxxMLP, SyyMLP]
     
     print(f"Total Cases Found: {len(EXPERIMENTAL_CASES)}")
     
-    for case_name, case_data in EXPERIMENTAL_CASES.items():            
+    for case_name, case_data in EXPERIMENTAL_CASES.items():
+            train_cfg = copy.deepcopy(train_cfg_base)
+
+            if case_name not in ["quarterhole", "fullhole"]:
+                train_cfg.n_pde = 250
+                print(f"[{case_name}] Setting n_pde to 250")
+            else:
+                print(f"[{case_name}] Keeping n_pde at {train_cfg.n_pde}")
+
             for ModelClass in target_models:
                 try:
                     run_experiment(case_name, case_data, ModelClass, train_cfg)
