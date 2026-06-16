@@ -8,10 +8,12 @@ The code provides numerical examples for studying the physical consistency of ne
 
 A low loss value or a visually accurate solution for a single complex problem does not necessarily guarantee that a neural network satisfies fundamental consistency requirements. This repository provides patch-test-type examples for examining such behavior in computational mechanics.
 
+```text
 patch_test_nn/
 ├── README.md
-├── (requirements.txt)
+├── requirements.txt
 ├── src/
-├── (examples/)
-├── (results/)
-└── (figures/)
+├── examples/
+├── results/
+└── figures/
+```
