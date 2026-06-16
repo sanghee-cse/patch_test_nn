@@ -11,9 +11,9 @@ A low loss value or a visually accurate solution for a single complex problem do
 ```text
 patch_test_nn/
 ├── README.md
-├── requirements.txt
+├── (requirements.txt)
 ├── src/
-├── examples/
-├── results/
-└── figures/
+├── (examples/)
+├── (results/)
+└── (figures/)
 ```
