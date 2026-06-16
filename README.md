@@ -1,5 +1,5 @@
 # patch_test_nn
-A study on the physical consistency of neural networks in computational mechanics.
 
-Can we trust a neural network just because its loss is low?
-Can we trust a neural network showing a good-looking result on a single complex problem?
+This repository contains the implementation used in the paper "The Patch Tests for Verification of Machine Learning Procedures."
+
+The code provides numerical examples for studying the physical consistency of neural-network-based approximations in computational mechanics, with a focus on patch-test-type verification problems.
